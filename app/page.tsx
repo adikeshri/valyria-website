@@ -1,5 +1,6 @@
 import { Star, Eye } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
+import BetaAccessForm from "./components/BetaAccessForm";
 
 const REPO = "https://github.com/adikeshri/valyria";
 const APP_REPO = "https://github.com/adikeshri/valyria-app";
@@ -34,6 +35,11 @@ export default function Page() {
         </a>
         <div className="spacer" />
 
+        <a className="nav-link" href="#beta">
+          <span className="hide-sm">Early access</span>
+          <span className="show-sm" aria-hidden>Beta</span>
+        </a>
+
         <a className="nav-link" href={REPO} target="_blank" rel="noreferrer">
           <GithubMark />
           <span className="hide-sm">GitHub</span>
@@ -66,9 +72,9 @@ export default function Page() {
                 <Star size={16} aria-hidden />
                 Star it on GitHub
               </a>
-              <a className="btn" href={`${REPO}/subscription`} target="_blank" rel="noreferrer">
+              <a className="btn" href="#beta">
                 <Eye size={16} aria-hidden />
-                Watch for the drop
+                Request early access
               </a>
             </div>
 
@@ -114,6 +120,24 @@ export default function Page() {
             <p>
               Nothing gets written, run, or installed <em>without your say-so</em>.
             </p>
+          </div>
+        </section>
+
+        <section className="beta" id="beta">
+          <div className="wrap beta-wrap">
+            <div className="beta-copy">
+              <span className="badge badge--accent">
+                <span className="dot dot--warning dot--pulse" />
+                Private beta
+              </span>
+              <h2>Be a beta tester.</h2>
+              <p>
+                Early builds go out in small batches. Leave your email and a line
+                about what you&apos;d point Valyria at — we&apos;ll send a build
+                and a way to file feedback.
+              </p>
+            </div>
+            <BetaAccessForm />
           </div>
         </section>
 

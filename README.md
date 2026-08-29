@@ -23,9 +23,72 @@ system UI / `SF Mono` type stack, and [`lucide-react`](https://lucide.dev) icons
 | `app/layout.tsx` | `<html>` shell, metadata / OpenGraph, favicons, and the no-flash theme-init script. |
 | `app/page.tsx` | The page itself (server component). |
 | `app/components/ThemeToggle.tsx` | Client component — light / dark / system, persisted to `localStorage`. |
+| `app/components/BetaAccessForm.tsx` | Client component — the "request early access" form: required email / name / company / designation, honeypot + time-trap, inserts straight into Supabase. |
 | `app/globals.css` | Design tokens (from `valyria-app`) + all page styles. |
 | `app/robots.ts`, `app/sitemap.ts` | Generated `/robots.txt` and `/sitemap.xml`. |
 | `public/assets/` | Logo mark + favicons, the still `screenshot.png` fallback, and the hero screencast (`hero.webm` / `hero.mp4` / `hero-poster.jpg`). |
+
+## Early-access form
+
+`app/components/BetaAccessForm.tsx` collects beta-tester sign-ups. It stays
+static — the browser inserts a row directly into **Supabase** (Postgres) using
+the project's public `anon` key. No server, no third-party form service, always
+free on Supabase's free tier.
+
+**Required fields:** `email`, `name`, `company`, `designation`. OS and use case
+are optional. A device that has already signed up sees the confirmation instead
+of the form (`valyria-beta-signed-up` in `localStorage`).
+
+### One-time setup
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier).
+2. **SQL Editor → paste [`supabase/schema.sql`](supabase/schema.sql) → Run.**
+   That creates the `beta_signups` table and — crucially — a Row-Level-Security
+   policy that lets the `anon` role **INSERT only** (no read/update/delete). It
+   also adds `unique (email)` and length/format `CHECK`s so junk can't bloat the
+   table.
+3. **Project Settings → API** — copy the **Project URL** and the **anon public**
+   key into `.env.local` (see [`.env.local.example`](.env.local.example)) and
+   into the Vercel project's Environment Variables:
+
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+   ```
+
+Read submissions in the Supabase **Table Editor**, or export from there. With
+the vars unset (e.g. a fork), the form falls back to opening the visitor's mail
+client addressed to `BETA_EMAIL` (`beta@valyria.dev`).
+
+### How the request works
+
+```
+POST {SUPABASE_URL}/rest/v1/beta_signups
+apikey: {anon key}
+Authorization: Bearer {anon key}
+Prefer: return=minimal
+{ email, name, company, designation, os, use_case, source }
+```
+
+`201` → added. `409` → email already present (unique constraint) — the form
+treats that as "you're on the list" too. Anything else surfaces an inline error.
+
+### Spam protection
+
+1. **Honeypot** — a hidden `_gotcha` field; a submission with it filled is
+   dropped silently.
+2. **Time-trap** — submissions that arrive < `MIN_FILL_MS` (3s) after the form
+   mounts get a soft "double-check your details" message (an instant retry
+   passes). Stops bots that POST on page load.
+3. **Postgres constraints** — `unique (email)` + email-shape and length `CHECK`s
+   reject malformed / oversized rows at the database.
+
+Because the endpoint just appends a row to *your* free database, abuse has no
+cost or quota to hit — unwanted rows are deleted in the Table Editor. If bot
+volume ever becomes a real nuisance, the upgrade path is a **Supabase Edge
+Function** (free tier, 500k invocations/mo) that verifies a CAPTCHA token and
+rate-limits by IP before inserting with the `service_role` key; the form would
+then POST to the function instead of `rest/v1`.
 
 ## Develop
 
